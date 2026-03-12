@@ -1,0 +1,60 @@
+# ------------------------------
+# Environment and secrets
+# ------------------------------
+.env
+.env.*
+!.env.example
+frontend/.env.local
+backend/.env
+
+# ------------------------------
+# Node / Next.js
+# ------------------------------
+node_modules/
+.next/
+out/
+.turbo/
+.pnpm-store/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ------------------------------
+# Python
+# ------------------------------
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# ------------------------------
+# Build artifacts
+# ------------------------------
+dist/
+build/
+
+# ------------------------------
+# Runtime and generated media
+# ------------------------------
+uploads/
+storage/
+backend/storage/
+tmp/
+*.log
+celerybeat-schedule
+
+# ------------------------------
+# OS / editor files
+# ------------------------------
+.DS_Store
+.idea/
+.vscode/

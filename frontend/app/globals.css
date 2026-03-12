@@ -1,0 +1,130 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  background:
+    radial-gradient(1200px 620px at 90% -10%, rgba(59, 130, 246, 0.16), transparent 58%),
+    radial-gradient(900px 520px at 0% 0%, rgba(249, 115, 22, 0.12), transparent 52%),
+    #f7f0e4;
+  color: #1f2937;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ---------- Glassmorphism utility ---------- */
+.glass {
+  background: rgba(255, 250, 240, 0.86);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(148, 163, 184, 0.34);
+}
+
+.glass-raised {
+  background: rgba(255, 250, 240, 0.94);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  border: 1px solid rgba(148, 163, 184, 0.38);
+}
+
+/* ---------- Gradient text ---------- */
+.gradient-text {
+  background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ---------- Gradient button ---------- */
+.btn-gradient {
+  background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
+  color: white;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-gradient:hover {
+  box-shadow: 0 10px 28px rgba(37, 99, 235, 0.32);
+  transform: translateY(-1px);
+}
+
+.btn-gradient:active {
+  transform: translateY(0);
+}
+
+/* ---------- Ghost button ---------- */
+.btn-ghost {
+  background: transparent;
+  border: 1px solid rgba(148, 163, 184, 0.62);
+  color: #1f2937;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.btn-ghost:hover {
+  border-color: rgba(37, 99, 235, 0.62);
+  background: rgba(37, 99, 235, 0.08);
+}
+
+/* ---------- Animated background orbs ---------- */
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+}
+
+.orb-purple {
+  background: rgba(37, 99, 235, 0.14);
+}
+
+.orb-cyan {
+  background: rgba(249, 115, 22, 0.12);
+}
+
+/* ---------- Scrollbar ---------- */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f7f0e4;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.65);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.75);
+}
+
+/* ---------- Links ---------- */
+a {
+  transition: color 0.2s ease;
+}
+
+/* ---------- Video ---------- */
+video {
+  border-radius: 1.5rem;
+  background: #e2e8f0;
+}
+
+/* ---------- Input focus ---------- */
+input:focus,
+textarea:focus {
+  outline: none;
+}
+
+/* ---------- Animation delays for staggered entrance ---------- */
+.delay-100 { animation-delay: 0.1s; }
+.delay-200 { animation-delay: 0.2s; }
+.delay-300 { animation-delay: 0.3s; }
+.delay-400 { animation-delay: 0.4s; }
