@@ -25,6 +25,9 @@ services:
       FFPROBE_BIN: /usr/bin/ffprobe
       CORS_ORIGINS: '["https://${DOMAIN}"]'
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:-150}
+      MAX_DURATION_SECONDS: ${MAX_DURATION_SECONDS:-180}
+      WHISPERX_MODEL: ${WHISPERX_MODEL:-base}
     depends_on:
       - postgres
       - redis
@@ -34,7 +37,7 @@ services:
   worker:
     build:
       context: ./backend
-    command: celery -A app.tasks.celery_app worker --loglevel=info
+    command: celery -A app.tasks.celery_app worker --loglevel=info --concurrency=1 --prefetch-multiplier=1 --max-tasks-per-child=10 -B
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-reel_captioning}
@@ -42,6 +45,7 @@ services:
       STORAGE_ROOT: /app/storage
       FFMPEG_BIN: /usr/bin/ffmpeg
       FFPROBE_BIN: /usr/bin/ffprobe
+      WHISPERX_MODEL: ${WHISPERX_MODEL:-base}
     depends_on:
       - postgres
       - redis

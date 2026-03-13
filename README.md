@@ -173,12 +173,22 @@ Set values in `.env.prod`:
 - `DOMAIN`
 - `POSTGRES_PASSWORD`
 - `JWT_SECRET_KEY`
+- `MAX_UPLOAD_SIZE_MB` (default `150`)
+- `MAX_DURATION_SECONDS` (default `180`)
+- `WHISPERX_MODEL` (default `base`)
 
 ### 3. Launch production stack
 
 ```bash
 docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
 ```
+
+Production cost defaults in this repo:
+
+- worker concurrency `1`
+- hourly guest-project cleanup schedule
+- intermediate artifact cleanup after each job
+- smaller default transcription model (`base`)
 
 ### 4. Verify
 

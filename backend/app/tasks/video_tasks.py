@@ -69,6 +69,9 @@ def process_project_video(self, project_id: int, job_id: int) -> None:
             db.commit()
             jobs.update_status(job_id, "failed", "failed", str(exc))
             raise
+        finally:
+            # Keep only source and final output; remove intermediates to control storage costs.
+            storage.cleanup_intermediate_files(project_id)
 
 
 @celery_app.task
