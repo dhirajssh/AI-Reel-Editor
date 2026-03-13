@@ -139,6 +139,70 @@ Stop services:
 docker compose down
 ```
 
+## Production deployment (single VPS)
+
+This repository includes a production stack in `docker-compose.prod.yml`:
+
+- `frontend` (Next.js production image)
+- `backend` (FastAPI)
+- `worker` (Celery)
+- `postgres`
+- `redis`
+- `caddy` (reverse proxy and TLS)
+
+Why this shape:
+
+- the app currently uses local filesystem storage
+- backend and worker must share storage
+- a single host keeps that shared volume simple
+
+### 1. Prepare server
+
+- Provision a Linux VM with Docker and Docker Compose.
+- Point your domain DNS `A` record to the server IP.
+- Open ports `80` and `443`.
+
+### 2. Configure production env
+
+```bash
+cp .env.prod.example .env.prod
+```
+
+Set values in `.env.prod`:
+
+- `DOMAIN`
+- `POSTGRES_PASSWORD`
+- `JWT_SECRET_KEY`
+- `MAX_UPLOAD_SIZE_MB` (default `150`)
+- `MAX_DURATION_SECONDS` (default `180`)
+- `WHISPERX_MODEL` (default `base`)
+
+### 3. Launch production stack
+
+```bash
+docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
+```
+
+Production cost defaults in this repo:
+
+- worker concurrency `1`
+- hourly guest-project cleanup schedule
+- intermediate artifact cleanup after each job
+- smaller default transcription model (`base`)
+
+### 4. Verify
+
+```bash
+docker compose --env-file .env.prod -f docker-compose.prod.yml ps
+docker compose --env-file .env.prod -f docker-compose.prod.yml logs -f backend
+docker compose --env-file .env.prod -f docker-compose.prod.yml logs -f worker
+```
+
+App URLs:
+
+- `https://<your-domain>`
+- `https://<your-domain>/health` (backend health via proxy)
+
 ## Endpoints
 
 ### API

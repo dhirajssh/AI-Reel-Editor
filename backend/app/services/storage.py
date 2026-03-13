@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import shutil
 from pathlib import Path
 from uuid import uuid4
@@ -14,10 +15,20 @@ class StorageService:
         self.settings = get_settings()
         self.root = Path(self.settings.storage_root)
         self.root.mkdir(parents=True, exist_ok=True)
+        try:
+            os.chmod(self.root, 0o777)
+        except OSError:
+            pass
 
     def project_dir(self, project_id: int) -> Path:
         path = self.root / f"project_{project_id}"
         path.mkdir(parents=True, exist_ok=True)
+        # Worker runs as non-root, so project directories must be writable across
+        # backend/worker processes even when backend creates them first.
+        try:
+            os.chmod(path, 0o777)
+        except OSError:
+            pass
         return path
 
     def save_upload(self, project_id: int, upload: UploadFile) -> str:
@@ -40,8 +51,18 @@ class StorageService:
     def captions_ass_path(self, project_id: int) -> str:
         return str(self.project_dir(project_id) / "captions.ass")
 
+    def cleanup_intermediate_files(self, project_id: int) -> None:
+        """Delete non-final processing artifacts to reduce disk usage."""
+        project_dir = self.root / f"project_{project_id}"
+        if not project_dir.exists():
+            return
+
+        for filename in ("audio.wav", "normalized_vertical.mp4", "captions.ass"):
+            path = project_dir / filename
+            if path.exists():
+                path.unlink()
+
     def cleanup_project_files(self, project_id: int) -> None:
         project_dir = self.root / f"project_{project_id}"
         if project_dir.exists():
             shutil.rmtree(project_dir)
-

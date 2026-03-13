@@ -12,6 +12,15 @@ celery_app.conf.update(
     result_serializer="json",
     accept_content=["json"],
     timezone="UTC",
+    task_ignore_result=True,
+    result_expires=3600,
+    worker_prefetch_multiplier=1,
+    beat_schedule={
+        "cleanup-expired-guest-projects-hourly": {
+            "task": "app.tasks.video_tasks.cleanup_guest_projects_task",
+            "schedule": 3600.0,
+        }
+    },
 )
 
 # Import task modules so Celery registers application tasks in both worker and API processes.
