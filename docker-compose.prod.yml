@@ -37,7 +37,7 @@ services:
   worker:
     build:
       context: ./backend
-    command: celery -A app.tasks.celery_app worker --loglevel=info --concurrency=1 --prefetch-multiplier=1 --max-tasks-per-child=10 -B
+    command: celery -A app.tasks.celery_app worker --loglevel=info --concurrency=1 --prefetch-multiplier=1 --max-tasks-per-child=10 --uid=65534 --gid=65534 -B --schedule=/tmp/celerybeat-schedule
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-reel_captioning}
@@ -46,6 +46,9 @@ services:
       FFMPEG_BIN: /usr/bin/ffmpeg
       FFPROBE_BIN: /usr/bin/ffprobe
       WHISPERX_MODEL: ${WHISPERX_MODEL:-base}
+      HOME: /tmp
+      XDG_CACHE_HOME: /tmp/.cache
+      MPLCONFIGDIR: /tmp/matplotlib
     depends_on:
       - postgres
       - redis
