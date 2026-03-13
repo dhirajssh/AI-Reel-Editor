@@ -1,0 +1,8 @@
+{$DOMAIN:localhost} {
+  encode gzip zstd
+
+  @backend path /api/* /storage/* /health /docs* /openapi.json
+  reverse_proxy @backend backend:8000
+
+  reverse_proxy frontend:3000
+}
