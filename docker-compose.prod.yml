@@ -28,6 +28,7 @@ services:
       MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:-150}
       MAX_DURATION_SECONDS: ${MAX_DURATION_SECONDS:-180}
       WHISPERX_MODEL: ${WHISPERX_MODEL:-base}
+      ASR_BACKEND: ${ASR_BACKEND:-auto}
     depends_on:
       - postgres
       - redis
@@ -46,6 +47,7 @@ services:
       FFMPEG_BIN: /usr/bin/ffmpeg
       FFPROBE_BIN: /usr/bin/ffprobe
       WHISPERX_MODEL: ${WHISPERX_MODEL:-base}
+      ASR_BACKEND: ${ASR_BACKEND:-auto}
       HOME: /tmp
       XDG_CACHE_HOME: /tmp/.cache
       MPLCONFIGDIR: /tmp/matplotlib

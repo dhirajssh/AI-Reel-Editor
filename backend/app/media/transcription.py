@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import logging
 import os
 import ssl
 from typing import Any
 
 from app.core.config import get_settings
+
+logger = logging.getLogger(__name__)
 
 
 class WhisperXService:
@@ -13,6 +16,28 @@ class WhisperXService:
         self._configure_model_download_env()
 
     def transcribe(self, audio_path: str) -> dict[str, Any]:
+        backend_choice = (self.settings.asr_backend or "auto").strip().lower()
+        if backend_choice == "transformers":
+            logger.info("ASR backend override active: transformers")
+            return self._transcribe_with_transformers(audio_path)
+
+        whisperx_error: Exception | None = None
+        try:
+            return self._transcribe_with_whisperx(audio_path)
+        except Exception as exc:  # pragma: no cover - runtime fallback path
+            whisperx_error = exc
+            logger.exception("WhisperX transcription failed, falling back to Transformers Whisper")
+
+        try:
+            return self._transcribe_with_transformers(audio_path)
+        except Exception as fallback_exc:
+            if whisperx_error is None:
+                raise
+            raise RuntimeError(
+                f"WhisperX failed ({whisperx_error!r}) and fallback ASR failed ({fallback_exc!r})"
+            ) from fallback_exc
+
+    def _transcribe_with_whisperx(self, audio_path: str) -> dict[str, Any]:
         try:
             import whisperx
         except ImportError as exc:
@@ -35,6 +60,108 @@ class WhisperXService:
             "text": full_text,
             "words": words,
         }
+
+    def _transcribe_with_transformers(self, audio_path: str) -> dict[str, Any]:
+        from transformers import pipeline
+
+        model_name = self._resolve_transformers_model_name(self.settings.whisperx_model)
+        asr = pipeline(
+            "automatic-speech-recognition",
+            model=model_name,
+            chunk_length_s=20,
+            device=-1,
+        )
+
+        word_result = asr(audio_path, return_timestamps="word")
+        words = self._extract_words_from_chunks(word_result.get("chunks", []))
+        full_text = (word_result.get("text") or "").strip()
+
+        if not words:
+            segment_result = asr(audio_path, return_timestamps=True)
+            segments = self._extract_segments_from_chunks(segment_result.get("chunks", []))
+            words = self._interpolate_words_from_segments(segments)
+            if not full_text:
+                full_text = (segment_result.get("text") or "").strip()
+
+        if not full_text:
+            full_text = " ".join(word["word"] for word in words)
+
+        return {
+            "text": full_text,
+            "words": words,
+        }
+
+    @staticmethod
+    def _resolve_transformers_model_name(model_hint: str) -> str:
+        name = (model_hint or "base").strip().lower()
+        if "/" in name:
+            return name
+
+        alias_map = {
+            "tiny": "openai/whisper-tiny",
+            "tiny.en": "openai/whisper-tiny.en",
+            "base": "openai/whisper-base",
+            "base.en": "openai/whisper-base.en",
+            "small": "openai/whisper-small",
+            "small.en": "openai/whisper-small.en",
+            "medium": "openai/whisper-medium",
+            "medium.en": "openai/whisper-medium.en",
+            "large": "openai/whisper-large-v3",
+            "large-v2": "openai/whisper-large-v2",
+            "large-v3": "openai/whisper-large-v3",
+        }
+        return alias_map.get(name, "openai/whisper-base")
+
+    @staticmethod
+    def _extract_words_from_chunks(chunks: list[dict]) -> list[dict]:
+        words: list[dict] = []
+        for chunk in chunks:
+            value = (chunk.get("text") or "").strip()
+            timestamp = chunk.get("timestamp")
+            if not value or not isinstance(timestamp, (list, tuple)) or len(timestamp) != 2:
+                continue
+
+            start, end = timestamp
+            if start is None or end is None:
+                continue
+
+            start_f = float(start)
+            end_f = float(end)
+            if end_f <= start_f:
+                continue
+
+            words.append(
+                {
+                    "word": value,
+                    "start": start_f,
+                    "end": end_f,
+                }
+            )
+        return words
+
+    @staticmethod
+    def _extract_segments_from_chunks(chunks: list[dict]) -> list[dict]:
+        segments: list[dict] = []
+        for chunk in chunks:
+            text = (chunk.get("text") or "").strip()
+            timestamp = chunk.get("timestamp")
+            if not text or not isinstance(timestamp, (list, tuple)) or len(timestamp) != 2:
+                continue
+            start, end = timestamp
+            if start is None or end is None:
+                continue
+            start_f = float(start)
+            end_f = float(end)
+            if end_f <= start_f:
+                continue
+            segments.append(
+                {
+                    "text": text,
+                    "start": start_f,
+                    "end": end_f,
+                }
+            )
+        return segments
 
     @staticmethod
     def _extract_aligned_words(segments: list[dict]) -> list[dict]:

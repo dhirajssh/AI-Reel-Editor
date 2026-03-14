@@ -176,6 +176,7 @@ Set values in `.env.prod`:
 - `MAX_UPLOAD_SIZE_MB` (default `150`)
 - `MAX_DURATION_SECONDS` (default `180`)
 - `WHISPERX_MODEL` (default `base`)
+- `ASR_BACKEND` (`auto` or `transformers`, default `auto`)
 
 ### 3. Launch production stack
 
@@ -296,6 +297,7 @@ Important values:
 - `REDIS_URL`
 - `STORAGE_ROOT`
 - `WHISPERX_MODEL`
+- `ASR_BACKEND`
 - `FFMPEG_BIN`
 - `FFPROBE_BIN`
 
@@ -330,6 +332,21 @@ Update frontend API URL accordingly.
 ### Jobs stuck on first transcription
 
 First run may take longer due to WhisperX model download inside worker container.
+
+### EC2 transcription fails with `libctranslate2 ... executable stack`
+
+Set this in `.env.prod` and rebuild backend + worker:
+
+```env
+ASR_BACKEND=transformers
+```
+
+Then run:
+
+```bash
+docker compose --env-file .env.prod -f docker-compose.prod.yml build --no-cache backend worker
+docker compose --env-file .env.prod -f docker-compose.prod.yml up -d backend worker
+```
 
 ### Upload completes but no rendered output
 

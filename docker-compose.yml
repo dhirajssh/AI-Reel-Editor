@@ -25,6 +25,7 @@ services:
       FFMPEG_BIN: /usr/bin/ffmpeg
       FFPROBE_BIN: /usr/bin/ffprobe
       CORS_ORIGINS: '["http://localhost:3000","http://localhost:3001"]'
+      ASR_BACKEND: ${ASR_BACKEND:-auto}
     depends_on:
       - postgres
       - redis
@@ -43,6 +44,7 @@ services:
       STORAGE_ROOT: /app/storage
       FFMPEG_BIN: /usr/bin/ffmpeg
       FFPROBE_BIN: /usr/bin/ffprobe
+      ASR_BACKEND: ${ASR_BACKEND:-auto}
       HOME: /tmp
       XDG_CACHE_HOME: /tmp/.cache
       MPLCONFIGDIR: /tmp/matplotlib

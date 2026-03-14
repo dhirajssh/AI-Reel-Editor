@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     max_duration_seconds: int = 300
     guest_project_ttl_hours: int = 24
     whisperx_model: str = "small"
+    asr_backend: str = "auto"
     cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:3000", "http://localhost:3001"])
     ffmpeg_bin: str = "ffmpeg"
     ffprobe_bin: str = "ffprobe"
