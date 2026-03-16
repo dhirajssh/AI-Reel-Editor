@@ -1,384 +1,155 @@
-# AI Reel Captioning and Intro Zoom Editor
+# AI Video Captioning Platform
 
-Full stack app that turns a talking-head clip into a Reels-ready MP4 with:
+Full-stack app that turns a talking-head video into a Reels-ready vertical MP4 with burned-in, word-highlighted captions and an intro zoom effect.
 
-- burned-in captions
-- active word highlight timing
-- fixed intro zoom
-- async background processing
-- guest mode and account history mode
+## 1. Project Title
 
-## Why this project
+**AI Video Captioning Platform**  
+Create captioned 9:16 short-form videos automatically from a single upload.
 
-Short form creators usually juggle multiple tools for captions, timing, and export settings.  
-This app gives one pipeline from upload to downloadable reel.
+## 2. Demo
 
-Output target:
+- Live deployment: `https://<your-domain>` (replace with your deployed URL)
+- Demo video/GIF: `docs/demo.gif` (add your recording path or hosted link)
 
-- 9:16 vertical
-- 1080x1920
-- MP4 with H.264 video + AAC audio
-- caption placement suitable for social overlays
+## 3. Features
 
-## Tech stack
+- Upload MP4, MOV, or WEBM clips
+- Guest mode (no sign-in) with 24-hour project retention
+- Account mode (email/password + JWT) with project history
+- Async processing with queued/processing/completed/failed statuses
+- WhisperX transcription with fallback ASR backend support
+- Word-level highlighted captions rendered into output video
+- Intro zoom effect (first 2 seconds)
+- Final export as 1080x1920 MP4 (H.264 + AAC)
+- Project dashboard, detail view, playback, and download
 
-- Frontend: Next.js 15, TypeScript, Tailwind CSS
-- Backend API: FastAPI, SQLAlchemy
-- Auth: optional account auth with JWT (email and password)
-- Queue: Celery + Redis
-- DB: PostgreSQL
-- AI transcription: WhisperX
-- Rendering: FFmpeg
-- Storage: local filesystem with clear service boundaries for future object storage
-- Runtime: Docker Compose for backend services
+## 4. Architecture
 
-## Product behavior
+- Frontend:
+  - Next.js 15 app (`frontend/`)
+  - Handles auth state, uploads, polling, and project UI
+- Backend:
+  - FastAPI service (`backend/app/`)
+  - Exposes auth, projects, and jobs APIs
+  - Stores metadata in PostgreSQL
+  - Serves media from `/storage`
+- Worker / processing pipeline:
+  - Celery worker + Redis broker
+  - Runs FFmpeg normalization/rendering and WhisperX transcription
+  - Persists job progress and transcript data
 
-### Guest mode
+## 5. Tech Stack
 
-- no sign in required
-- can upload, process, preview, and download
-- projects tied to `guest_session_id`
-- guest projects expire after 24 hours
+- Frontend:
+  - Next.js 15
+  - TypeScript
+  - Tailwind CSS
+- Backend:
+  - FastAPI
+  - SQLAlchemy
+  - Celery
+- Database:
+  - PostgreSQL
+- AI / media processing:
+  - WhisperX
+  - Transformers (fallback ASR path)
+  - FFmpeg / ffprobe
+- Infrastructure:
+  - Docker + Docker Compose
+  - Redis
+  - Caddy reverse proxy (production compose stack)
+  - AWS EC2 compatible deployment model
 
-### Signed-in mode
+## 6. Processing Pipeline
 
-- email/password sign-up and sign-in
-- saved project history
-- guest projects can be attached after sign-in
+1. User creates project and uploads video from frontend.
+2. Backend stores original file under `storage/project_<id>/` and creates a queued job.
+3. Celery worker picks up the job.
+4. Worker normalizes video to vertical (1080x1920), extracts mono 16kHz audio.
+5. WhisperX (or fallback ASR) returns transcript + word timestamps.
+6. Caption segments are generated and written to an ASS subtitle file.
+7. FFmpeg applies intro zoom + caption burn-in to render final MP4.
+8. Backend updates job/project status and frontend polls to display progress + download link.
 
-### Processing states
+## 7. Setup / Installation
 
-- `queued`
-- `processing`
-- `completed`
-- `failed`
+### Prerequisites
 
-Progress messages include stages such as `extracting audio`, `transcribing`, `generating captions`, `rendering video`.
+- Docker Desktop (or Docker Engine + Compose)
+- Node.js 20+
+- npm
 
-## Repository layout
-
-```text
-frontend/
-  app/
-  components/
-  lib/
-  types/
-backend/
-  app/
-    api/
-    core/
-    db/
-    media/
-    models/
-    schemas/
-    services/
-    tasks/
-docker-compose.yml
-Makefile
-```
-
-## Architecture
-
-```text
-Browser (Next.js)
-  -> FastAPI (/api/projects, /api/jobs, /api/auth)
-  -> PostgreSQL (projects, jobs, transcripts, users)
-  -> Redis (Celery broker/result backend)
-  -> Celery worker (FFmpeg + WhisperX pipeline)
-  -> Local storage (/backend/storage)
-```
-
-## Quick start
-
-### 1. Prerequisites
-
-- Docker Desktop running
-- Node.js 20+ and npm
-
-### 2. Start backend stack (API, worker, DB, Redis)
-
-From repo root:
+### Run locally
 
 ```bash
+# from repo root
 docker compose up postgres redis backend worker --build
 ```
 
-After first build, you can run without rebuilding:
-
-```bash
-docker compose up postgres redis backend worker
-```
-
-### 3. Start frontend
-
-In another terminal:
+In a second terminal:
 
 ```bash
 cd frontend
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8000 npm run dev
 ```
 
-### 4. Open app
-
-- Frontend: `http://localhost:3000` (or the port Next.js prints)
-- Backend health: `http://localhost:8000/health`
-
-## Daily run commands
-
-Start services:
-
-```bash
-docker compose up -d postgres redis backend worker
-cd frontend && NEXT_PUBLIC_API_BASE_URL=http://localhost:8000 npm run dev
-```
-
-Stop services:
-
-```bash
-docker compose down
-```
-
-## Production deployment (single VPS)
-
-This repository includes a production stack in `docker-compose.prod.yml`:
-
-- `frontend` (Next.js production image)
-- `backend` (FastAPI)
-- `worker` (Celery)
-- `postgres`
-- `redis`
-- `caddy` (reverse proxy and TLS)
-
-Why this shape:
-
-- the app currently uses local filesystem storage
-- backend and worker must share storage
-- a single host keeps that shared volume simple
-
-### 1. Prepare server
-
-- Provision a Linux VM with Docker and Docker Compose.
-- Point your domain DNS `A` record to the server IP.
-- Open ports `80` and `443`.
-
-### 2. Configure production env
-
-```bash
-cp .env.prod.example .env.prod
-```
-
-Set values in `.env.prod`:
-
-- `DOMAIN`
-- `POSTGRES_PASSWORD`
-- `JWT_SECRET_KEY`
-- `MAX_UPLOAD_SIZE_MB` (default `150`)
-- `MAX_DURATION_SECONDS` (default `180`)
-- `WHISPERX_MODEL` (default `base`)
-- `ASR_BACKEND` (`auto` or `transformers`, default `auto`)
-
-### 3. Launch production stack
-
-```bash
-docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
-```
-
-Production cost defaults in this repo:
-
-- worker concurrency `1`
-- hourly guest-project cleanup schedule
-- intermediate artifact cleanup after each job
-- smaller default transcription model (`base`)
-
-### 4. Verify
-
-```bash
-docker compose --env-file .env.prod -f docker-compose.prod.yml ps
-docker compose --env-file .env.prod -f docker-compose.prod.yml logs -f backend
-docker compose --env-file .env.prod -f docker-compose.prod.yml logs -f worker
-```
-
 App URLs:
 
-- `https://<your-domain>`
-- `https://<your-domain>/health` (backend health via proxy)
+- Frontend: `http://localhost:3000`
+- Backend health: `http://localhost:8000/health`
 
-## Endpoints
+## 8. Environment Variables
 
-### API
+### Root `.env` (docker-compose.yml)
 
-- `POST /api/auth/register`
-- `POST /api/auth/login`
-- `GET /api/auth/me`
-- `DELETE /api/auth/account`
-- `POST /api/projects`
-- `POST /api/projects/{id}/upload`
-- `GET /api/projects`
-- `GET /api/projects/{id}`
-- `DELETE /api/projects/{id}`
-- `POST /api/projects/{id}/attach-guest`
-- `GET /api/jobs/{job_id}`
+- `POSTGRES_DB`
+- `POSTGRES_USER`
+- `POSTGRES_PASSWORD`
+- `POSTGRES_PORT`
+- `REDIS_PORT`
+- `BACKEND_PORT`
+- `FRONTEND_PORT`
 
-### Static media
-
-- `GET /storage/...` for original and processed files
-
-## Data model
-
-### users
-
-- `id`
-- `email`
-- `name`
-- `password_hash`
-- `created_at`
-
-### projects
-
-- `id`
-- `user_id` (nullable)
-- `guest_session_id` (nullable)
-- `title`
-- `original_filename`
-- `original_file_path`
-- `processed_file_path` (nullable)
-- `status`
-- `created_at`
-- `updated_at`
-- `expires_at` (nullable)
-
-Constraint: each project belongs to either `user_id` or `guest_session_id`.
-
-### jobs
-
-- `id`
-- `project_id`
-- `status`
-- `progress_message`
-- `error_message`
-- `created_at`
-- `updated_at`
-- `completed_at`
-
-### transcripts
-
-- `id`
-- `project_id`
-- `full_text`
-- `word_timestamps_json`
-- `caption_segments_json`
-- `created_at`
-
-## Processing pipeline
-
-1. Save uploaded source video.
-2. Normalize to vertical reel target.
-3. Extract audio with FFmpeg.
-4. Run WhisperX for transcript and word timestamps.
-5. Segment words into readable caption lines.
-6. Build ASS subtitle timeline with active-word highlight.
-7. Apply intro zoom (0-1s in, 1-2s out) and burn captions.
-8. Export final MP4 and update project/job/transcript records.
-
-## Environment configuration
-
-### Root `.env` (optional)
-
-Copy `.env.example` to `.env` to override service ports used by Docker Compose.
-
-### Backend `.env` (optional outside Docker)
-
-Copy `backend/.env.example` to `backend/.env`.
-
-Important values:
+### Backend `.env` (local backend-only runs)
 
 - `DATABASE_URL`
 - `REDIS_URL`
 - `STORAGE_ROOT`
+- `CORS_ORIGINS`
+- `MAX_UPLOAD_SIZE_MB`
+- `MAX_DURATION_SECONDS`
 - `WHISPERX_MODEL`
 - `ASR_BACKEND`
 - `FFMPEG_BIN`
 - `FFPROBE_BIN`
 
-### Frontend `.env.local`
+### Production `.env.prod` (docker-compose.prod.yml)
 
-Set:
+- `DOMAIN`
+- `POSTGRES_DB`
+- `POSTGRES_USER`
+- `POSTGRES_PASSWORD`
+- `JWT_SECRET_KEY`
+- `MAX_UPLOAD_SIZE_MB`
+- `MAX_DURATION_SECONDS`
+- `WHISPERX_MODEL`
+- `ASR_BACKEND`
 
-```env
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
-```
+## 9. Deployment
 
-Note: `frontend/.env.example` still contains old Clerk keys from early scaffolding and they are not used by the current auth implementation.
+Current deployment model in this repo:
 
-## Troubleshooting
+- `frontend`: Docker container in `docker-compose.prod.yml`
+- `backend`: Docker container in `docker-compose.prod.yml`
+- `worker`: Docker container in `docker-compose.prod.yml`
+- `postgres`: Docker container (same host)
+- `redis`: Docker container (same host)
+- `caddy`: Reverse proxy container routing traffic to frontend/backend
+- Host environment: single VPS/VM (for example AWS EC2) with shared Docker volumes
 
-### `docker.sock` not found
-
-Docker Desktop is not running. Start Docker Desktop and retry.
-
-### Port already in use
-
-Stop the conflicting process or override ports in root `.env`:
-
-```env
-BACKEND_PORT=8010
-POSTGRES_PORT=5433
-REDIS_PORT=6380
-```
-
-Update frontend API URL accordingly.
-
-### Jobs stuck on first transcription
-
-First run may take longer due to WhisperX model download inside worker container.
-
-### EC2 transcription fails with `libctranslate2 ... executable stack`
-
-Set this in `.env.prod` and rebuild backend + worker:
-
-```env
-ASR_BACKEND=transformers
-```
-
-Then run:
+Production launch command:
 
 ```bash
-docker compose --env-file .env.prod -f docker-compose.prod.yml build --no-cache backend worker
-docker compose --env-file .env.prod -f docker-compose.prod.yml up -d backend worker
+docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
 ```
-
-### Upload completes but no rendered output
-
-Check worker logs:
-
-```bash
-docker compose logs -f worker
-```
-
-## Local run without Docker (optional)
-
-If you prefer local services for Postgres/Redis:
-
-```bash
-cd backend
-python3 -m uvicorn app.main:app --host 127.0.0.1 --port 8000
-celery -A app.tasks.celery_app worker --loglevel=info
-```
-
-Then run frontend as usual.
-
-## Current limitations
-
-- single caption style
-- no scene detection
-- no face tracking
-- no billing or teams
-- local storage only for now
-
-## Next hardening steps
-
-- add Alembic migrations for schema evolution
-- add integration tests for upload and ownership
-- move media serving to signed URLs behind authenticated download routes
-- add object storage provider (S3-compatible)
